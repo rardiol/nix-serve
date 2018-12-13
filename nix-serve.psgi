@@ -25,7 +25,7 @@ my $app = sub {
         my $hashPart = $1;
         my $storePath = queryPathFromHashPart($hashPart);
         return [404, ['Content-Type' => 'text/plain'], ["No such path.\n"]] unless $storePath;
-        my ($deriver, $narHash, $time, $narSize, $refs) = queryPathInfo($storePath, 1) or die;
+        my ($deriver, $narHash, $time, $narSize, $refs, $sigs) = queryPathInfoSigs($storePath, 1) or die;
         my $res =
             "StorePath: $storePath\n" .
             "URL: nar/$hashPart.nar\n" .
@@ -41,8 +41,11 @@ my $app = sub {
             chomp $secretKey;
             my $fingerprint = fingerprintPath($storePath, $narHash, $narSize, $refs);
             my $sig = signString($secretKey, $fingerprint);
-            $res .= "Sig: $sig\n";
+            push(@$sigs, $sig);
+            $res .= "Sigmy: $sig\n";
         }
+        $res .= "Sig: " . join(" ", @$sigs) . "\n"
+            if scalar @$sigs > 0;
         return [200, ['Content-Type' => 'text/x-nix-narinfo'], [$res]];
     }
 
